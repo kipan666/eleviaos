@@ -1,0 +1,16 @@
+{
+    "editor.formatOnSave": true,
+    "files.associations": {
+        "*.S": "gas",
+        "new": "cpp",
+        "streambuf": "cpp",
+        "functional": "cpp",
+        "typeinfo": "cpp",
+        "variant": "cpp",
+        "atomic": "cpp",
+        "optional": "cpp",
+        "*.inc": "cpp",
+        "*.tcc": "cpp",
+        "sstream": "cpp"
+    }
+}
