@@ -1,31 +1,21 @@
-CPP_FILES=$(shell find . -type f -name '*.cpp')
+CPP_FILES=$(shell find . -type f -name '*.c')
 S_FILES=$(shell find . -type f -name '*.asm')
-DFILES=$(CPP_FILES:.cpp=.d)
+DFILES=$(CPP_FILES:.c=.d)
 FONT_OBJ=../resources/fonts/default.o 
-OBJ=$(patsubst ./%.cpp,../build/kernel/%.o,$(CPP_FILES)) $(patsubst %.asm,../build/kernel/%_asm.o,$(S_FILES))
+OBJ=$(CPP_FILES:.c=.o) $(S_FILES:.asm=_asm.o)
 KERNEL=../build/kernel.elf
 
-CFLAGS= -g -O2 -pipe -Wall -Wextra -c\
-	-std=c++03            \
-	-ffreestanding       \
-	-fno-stack-protector \
-	-fno-stack-check     \
-	-fno-lto             \
-	-fno-pie             \
-	-fno-pic             \
-	-m64                 \
-	-march=x86-64        \
-	-mabi=sysv           \
-	-mno-80387           \
-	-mno-mmx             \
-	-mno-sse             \
-	-mno-sse2            \
-	-mno-red-zone        \
-	-mcmodel=kernel      \
-	-MMD                 \
-	-nostdlib           \
-	-nodefaultlibs    \
-	-O2                 \
+CFLAGS= -Wall -Wextra -O2 -pipe -ggdb -g \
+		-std=gnu11				\
+	-ffreestanding			\
+	-fno-stack-protector	\
+	-fno-pic -fpie			\
+	-mno-80387				\
+	-mno-mmx				\
+	-mno-3dnow				\
+	-mno-sse				\
+	-mno-sse2				\
+	-mno-red-zone		\
 	-I .
 
 # Internal linker flags that should not be changed by the user.
@@ -33,19 +23,21 @@ LDFLAGS = -nostdlib               \
 	-static                 \
 	-m elf_x86_64           \
 	-z max-page-size=0x1000 \
-	-T linker.ld
+	-T linker.ld	\
+	--no-dynamic-linker \
+	-ztext
 
 .PHONY: all
 all: $(OBJ)	
-	x86_64-elf-ld $(LDFLAGS) $(OBJ) $(FONT_OBJ) -o $(KERNEL)
+	x86_64-elf-ld $(LDFLAGS) $(OBJ) -o $(KERNEL)
 
 -include $(DFILES)
 	
-../build/kernel/%.o:%.cpp	
+%.o:%.c	
 	mkdir -p $(dir $@)
-	x86_64-elf-g++ $(CFLAGS) $< -o $@	
+	x86_64-elf-gcc $(CFLAGS) -c $< -o $@	
 
-../build/kernel/%_asm.o:%.asm
+%_asm.o:%.asm
 	nasm -f elf64 $< -o $@
 
 .PHONY: clean

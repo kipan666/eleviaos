@@ -11,6 +11,22 @@
         "optional": "cpp",
         "*.inc": "cpp",
         "*.tcc": "cpp",
-        "sstream": "cpp"
+        "sstream": "cpp",
+        "memory": "cpp",
+        "stivale2.h": "c",
+        "stdint.h": "c",
+        "array": "c",
+        "hash_map": "c",
+        "hash_set": "c",
+        "deque": "c",
+        "forward_list": "c",
+        "list": "c",
+        "string": "c",
+        "vector": "c",
+        "iterator": "c",
+        "string_view": "c",
+        "tuple": "c",
+        "ratio": "c",
+        "rsdt.h": "c"
     }
 }

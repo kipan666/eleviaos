@@ -6,7 +6,7 @@ all-hdd: barebones.hdd
 
 .PHONY: run
 run: iso
-	qemu-system-x86_64 -M pc-i440fx-4.2 -m 2G -cdrom elysia.iso -boot d -enable-kvm -s  -monitor stdio
+	qemu-system-x86_64 -M q35 -m 2G -smp 1 -cdrom elysia.iso -boot d  -s  -serial stdio --enable-kvm
 
 .PHONY: run-gdb
 run-gdb: iso
@@ -29,26 +29,26 @@ ovmf-x64:
 	cd ovmf-x64 && curl -o OVMF-X64.zip https://efi.akeo.ie/OVMF/OVMF-X64.zip && 7z x OVMF-X64.zip
 
 limine:
-	git clone https://github.com/limine-bootloader/limine.git --branch=v4.x-branch-binary --depth=1
+	git clone https://github.com/limine-bootloader/limine.git --branch=v2.0-branch-binary --depth=1
 	make -C limine
 
 .PHONY: kernel
 kernel:
 	mkdir -p build/kernel
-	$(MAKE) -C kernel
+	$(MAKE) -C kernel	
 
 iso: limine kernel
 	rm -rf iso_root
 	mkdir -p iso_root
+	cd initrd;tar -F ustar -cvf ../iso_root/initrd.tar *;cd ..
 	cp build/kernel.elf \
-		limine.cfg limine/limine.sys limine/limine-cd.bin limine/limine-cd-efi.bin iso_root/
-	@xorriso -as mkisofs -b limine-cd.bin \
+		limine.cfg limine/limine.sys limine/limine-cd.bin limine/limine-eltorito-efi.bin iso_root/
+	xorriso -as mkisofs -b limine-cd.bin \
 		-no-emul-boot -boot-load-size 4 -boot-info-table \
-		--efi-boot limine-cd-efi.bin \
+		--efi-boot limine-eltorito-efi.bin \
 		-efi-boot-part --efi-boot-image --protective-msdos-label \
-		iso_root -o elysia.iso > /dev/null 2>&1
-	@limine/limine-deploy elysia.iso > /dev/null 2>&1
-	@echo "\033[0;32m[Ok] ISO image generated successfully!\033[0;37m"		
+		iso_root -o elysia.iso 
+	limine/limine-install elysia.iso 	
 
 barebones.hdd: limine kernel
 	rm -f elysia.hdd

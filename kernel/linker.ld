@@ -9,9 +9,14 @@ ENTRY(_start)
 /* MMU permissions */
 PHDRS
 {
-    text    PT_LOAD    FLAGS((1 << 0) | (1 << 2)) ; /* Execute + Read */
-    rodata  PT_LOAD    FLAGS((1 << 2)) ;            /* Read only */
-    data    PT_LOAD    FLAGS((1 << 1) | (1 << 2)) ; /* Write + Read */
+    null    PT_NULL    FLAGS(0) ;                  
+    text    PT_LOAD    FLAGS((1 << 0) | (1 << 2)) ;
+    rodata  PT_LOAD    FLAGS((1 << 2)) ;           
+    data    PT_LOAD    FLAGS((1 << 1) | (1 << 2)) ;
+    dynamic PT_DYNAMIC FLAGS((1 << 1) | (1 << 2)) ;
+    /* text    PT_LOAD    FLAGS((1 << 0) | (1 << 2)) ; /* Execute + Read */
+    /* rodata  PT_LOAD    FLAGS((1 << 2)) ;            Read only */
+    /* data    PT_LOAD    FLAGS((1 << 1) | (1 << 2)) ; Write + Read */
 }
 
 SECTIONS
@@ -20,34 +25,34 @@ SECTIONS
     /* and because that is what the Limine spec mandates. */
     /* Any address in this region will do, but often 0xffffffff80000000 is chosen as */
     /* that is the beginning of the region. */
-    . = 0xffffffff80000000;
+    . = 0xffffffff80200000;
 
     .text : {
         *(.text .text.*)
     } :text
-/* 
-    . += CONSTANT(MAXPAGESIZE);
-    .init_array : {
-        PROVIDE_HIDDEN (__init_array_start = .);
-        KEEP (*(SORT_BY_INIT_PRIORITY(.init_array.*) SORT_BY_INIT_PRIORITY(.ctors.*)))
-        KEEP (*(.init_array .ctors))
-        PROVIDE_HIDDEN (__init_array_end = .);
-    } :text */
 
     /* Move to the next memory page for .rodata */
-    . += CONSTANT(MAXPAGESIZE);
+    . +=0x1000;
+
+    .stivale2hdr : {
+        KEEP(*(.stivale2hdr))
+    } :rodata
 
     .rodata : {
         *(.rodata .rodata.*)
     } :rodata
 
     /* Move to the next memory page for .data */
-    . += CONSTANT(MAXPAGESIZE);
+    . +=0x1000;  
 
     .data : {
-        *(.data .data.*)
+        *(.data*)
     } :data
 
+    .dynamic : {
+        *(.dynamic)
+    } :data :dynamic
+ 
     /* NOTE: .bss needs to be the last thing mapped to :data, otherwise lots of */
     /* unnecessary zeros will be written to the binary. */
     /* If you need, for example, .init_array and .fini_array, those should be placed */
@@ -58,8 +63,8 @@ SECTIONS
     } :data
 
     /* Discard .note.* and .eh_frame since they may cause issues on some hosts. */
-    /DISCARD/ : {
+    /* /DISCARD/ : {
         *(.eh_frame)
         *(.note .note.*)
-    }
+    } */
 }
