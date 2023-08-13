@@ -34,46 +34,35 @@
 #include <stdint.h>
 
 void outb(uint16_t port, uint8_t val) {
-  asm volatile("outb %0, %1" : : "a"(val), "Nd"(port));
+  asm volatile("outb %b0, %w1" : : "a"(val), "Nd"(port));
 }
 
 uint8_t inb(uint16_t port) {
   uint8_t ret;
-  asm volatile("inb %1, %0" : "=a"(ret) : "Nd"(port));
+  asm volatile("inb %w1, %b0" : "=a"(ret) : "Nd"(port));
   return ret;
 }
 void io_wait() { asm volatile("outb %%al, $0x80" : : "a"(0)); }
 
 void pic_remap() {
-  uint8_t a1, a2;
-  a1 = inb(PIC1_DATA);
-  a2 = inb(PIC2_DATA);
   // start initialization sequence
   outb(PIC1_COMMAND, ICW1_INIT | ICW1_ICW4);
   outb(PIC2_COMMAND, ICW1_INIT | ICW1_ICW4);
-  io_wait();
+  // io_wait();
   // set offsets
   outb(PIC1_DATA, 0x20);
   outb(PIC2_DATA, 0x28);
-  io_wait();
+  // io_wait();
   // set master-slave relationship
-  outb(PIC1_DATA, 0x04);
-  outb(PIC2_DATA, 0x02);
-  io_wait();
+  outb(PIC1_DATA, 4);
+  outb(PIC2_DATA, 2);
+  // io_wait();
   // set 8086 mode
   outb(PIC1_DATA, ICW4_8086);
   outb(PIC2_DATA, ICW4_8086);
-  io_wait();
 
-  outb(PIC1_DATA, 0x0);
-  outb(PIC2_DATA, 0x0);
-  io_wait();
-
-  // restore masks
-  outb(PIC1_DATA, a1);
-  io_wait();
-  outb(PIC2_DATA, a2);
-  io_wait();
+  outb(PIC1_DATA, 0xFF);
+  outb(PIC2_DATA, 0xFF);
 }
 
 void pic_disable() {

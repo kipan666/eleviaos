@@ -37,16 +37,16 @@
 
 struct MADT {
   char signature[4];
-  char length[4];
-  char revision;
-  char checksum;
-  char OEMID[6];
+  uint8_t length[4];
+  uint8_t revision;
+  uint8_t checksum;
+  uint8_t OEMID[6];
   uint8_t OEMTableID[8];
-  char OEMRevision[4];
-  char creatorID[4];
-  char creatorRevision[4];
-  char localAPICAddress[4];
-  char flags[4];
+  uint8_t OEMRevision[4];
+  uint8_t creatorID[4];
+  uint8_t creatorRevision[4];
+  uint8_t localApicAddress[4];
+  uint8_t flags[4];
 } __attribute__((packed));
 
 #endif // __FIRMW__ACPI__MADT_H_

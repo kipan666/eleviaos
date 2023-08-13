@@ -32,6 +32,8 @@
 
 #include "stivale2.h"
 #include <dev/cpu/apic/apic.h>
+#include <dev/cpu/apic/ioapic.h>
+#include <dev/cpu/apic/timer.h>
 #include <dev/cpu/gdt/gdt.h>
 #include <dev/cpu/int/idt.h>
 #include <dev/cpu/pic/pic.h>
@@ -40,6 +42,7 @@
 #include <dev/mem/budy.h>
 #include <dev/mem/pmm.h>
 #include <dev/mem/vmm.h>
+#include <firmw/acpi/acpi.h>
 #include <firmw/acpi/madt.h>
 #include <firmw/acpi/rsdp.h>
 #include <firmw/acpi/rsdt.h>
@@ -50,6 +53,7 @@
 
 static uint8_t stack[4096];
 static uint64_t *initrd;
+uint32_t time = 0;
 
 static struct stivale2_tag l5_tag = {
     .identifier = STIVALE2_HEADER_TAG_5LV_PAGING_ID, .next = 0};
@@ -131,54 +135,25 @@ void _start(struct stivale2_struct *stivale2_struct) {
   idt_setup();
   KDEBUG(DEBUG_LEVEL_INFO, "Interrupt Descriptor Table initialized");
 
-  // diable 8259 PIC
-  pic_disable();
-
   // RSDP
   struct stivale2_struct_tag_rsdp *rsdp_info =
       (struct stivale2_struct_tag_rsdp *)stivale2_get_tag(
           stivale2_struct, STIVALE2_STRUCT_TAG_RSDP_ID);
   KDEBUG(DEBUG_LEVEL_INFO, "RSDP address: 0x%x", rsdp_info->rsdp);
 
-  struct MADT *madt = 0;
-  ACPI_RSDP *rsdp = (ACPI_RSDP *)rsdp_info->rsdp;
-  struct ACPI_RSDT *rsdt = (struct ACPI_RSDT *)(rsdp->RsdtAddress);
-
-  int entry_count = (rsdt->h.Length - sizeof(rsdt->h)) / 4;
-  for (int i = 0; i < entry_count; i++) {
-    struct ACPI_SDT *h = (struct ACPI_SDT *)(rsdt->PointerToOtherSDT[i]);
-    if (strncmp(h->Signature, "APIC", 4) == 0) {
-      KDEBUG(DEBUG_LEVEL_DEBUG, "Multiple APIC Description Table Address: 0x%x",
-             h);
-      madt = (struct MADT *)h;
-      break;
-    }
-  }
-  if (!madt) {
-    KDEBUG(DEBUG_LEVEL_ERROR, "Multiple APIC Description Table not found");
-    for (;;)
-      ;
-  }
-
-  // LAPIC
-  uint8_t *local_apic_addr = (uint8_t *)(madt->localAPICAddress);
-  KDEBUG(DEBUG_LEVEL_DEBUG, "Local APIC Addr : 0x%x", local_apic_addr);
-
-  // I/O APIC
-  uint8_t *madt_e_ = (uint8_t *)(uintptr_t)(uint32_t *)madt + 44;
-  uint8_t *end_ = madt_e_ + *((uint32_t *)madt->length);
-  while (madt_e_ < end_) {
-    if (madt_e_[0] == 1) { // I/O APIC
-      KDEBUG(0, "I/O APIC Addr: 0x%x", *((uint32_t *)(madt_e_ + 4)));
-      break;
-    }
-    madt_e_ += madt_e_[1];
-  }
+  // ACPI
+  acpi_setup(rsdp_info);
 
   // APIC
   apic_setup();
-  KDEBUG(DEBUG_LEVEL_INFO, "Advanced Programmable Interrupt Controller "
-                           "initialized");
+  ioapic_setup();
+  apic_timer_setup();
+  __asm__ volatile("sti");
+
+  KDEBUG(DEBUG_LEVEL_INFO,
+         "Advanced Programmable Interrupt Controller initialized");
+  // KDEBUG(0, "Time : %d", time);
+
   for (;;) {
   }
 }

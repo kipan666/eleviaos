@@ -32,6 +32,7 @@
 
 #include "apic.h"
 #include <dev/mem/mem.h>
+#include <firmw/acpi/acpi.h>
 #include <libk/debug/debug.h>
 #include <libk/serial.h>
 
@@ -41,41 +42,42 @@ void cpuid(uint32_t *eax, uint32_t *ebx, uint32_t *ecx, uint32_t *edx) {
                : "0"(*eax), "2"(*ecx));
 }
 
-void cpuGetMSR(uint32_t msr, uint32_t *lo, uint32_t *hi) {
-  asm volatile("rdmsr" : "=a"(*lo), "=d"(*hi) : "c"(msr));
-}
-
-void cpuSetMSR(uint32_t msr, uint32_t lo, uint32_t hi) {
-  asm volatile("wrmsr" : : "a"(lo), "d"(hi), "c"(msr));
-}
-
 int apic_is_supported() {
   uint32_t eax, edx, unused;
   cpuid(&eax, &unused, &unused, &edx);
   return edx & (1 << 9);
 }
 
-void apic_setup(void) {
+#define APIC_TPR 0x80
+#define APIC_DFR 0xE0
+#define APIC_LDR 0xD0
+#define APIC_SVR 0xF0
+#define APIC_EOI 0xB0
+
+void apic_write(uint8_t reg, uint32_t value) {
+  *(volatile uint32_t *)(local_apic_addr + reg) = value;
+}
+
+uint32_t apic_read(uint8_t reg) {
+  return *(volatile uint32_t *)(local_apic_addr + reg);
+}
+
+void apic_setup() {
+  // check is apic supported
   if (apic_is_supported())
-    KDEBUG(1, "APIC supported");
+    KDEBUG(DEBUG_LEVEL_DEBUG, "APIC supported");
 
-  //   get apic addr
-  uint32_t eax, edx;
-  cpuGetMSR(0x1B, &eax, &edx);
-  uintptr_t apic_addr = (eax & 0xfffff000);
-  KDEBUG(1, "APIC addr: 0x%x", apic_addr);
+  apic_write(APIC_TPR, 0x00);
+  apic_write(APIC_DFR, 0xFFFFFFFF);
+  apic_write(APIC_LDR, 0x04000000);
+  apic_write(APIC_SVR, (1 << 8) | (1 << 9) | 0x2);
 
-  edx = 0;
-  eax = (apic_addr & 0xfffff0000) | 0x800;
-  cpuSetMSR(0x1B, eax, edx);
-  uint32_t *apic_base = (uint32_t *)phys_to_higher_half_data(apic_addr);
+  // mask lint 0 and lint 1
+  apic_write(0x350, 0x10000);
+  apic_write(0x360, 0x10000);
+}
 
-  uint32_t *svr = apic_base + 0xF0;
-  *svr |= (1 << 8);
-
-  //   IOACPI Setup
-  // get number entries support of IOAPIC
-  *((uint32_t *)apic_base + 0x0) = 0x1;
-  uint32_t i = *((uint32_t *)(apic_base + 0x10));
-  unsigned int max = ((i >> 16) & 0xff) + 1;
+void apic_eoi() {
+  apic_write(APIC_EOI, 0);
+  serial_send_string("EOI\n");
 }

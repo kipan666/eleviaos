@@ -31,12 +31,15 @@
 */
 
 #include "idt.h"
+#include <dev/cpu/apic/apic.h>
 #include <dev/cpu/pic/pic.h>
 #include <libk/debug/debug.h>
 #include <libk/serial.h>
 
+extern void spurious_interrupt();
 extern void *int_table[];
-
+extern void pit_interrupt();
+extern uint32_t time;
 static idt_entry_t idt[256];
 static idt_ptr_t idt_ptr;
 
@@ -45,19 +48,22 @@ void idt_setup(void) {
     idt[i] = add_idt_entry((uint64_t)int_table[i], 0x28, 0, 0x8E);
 
   pic_remap();
-  KDEBUG(1, "Remap PIC done");
+  KDEBUG(1, "Remap and disable PIC done");
 
-  for (int i = 32; i <= 47; i++)
+  for (int i = 33; i <= 47; i++)
     idt[i] = add_idt_entry((uint64_t)int_table[i], 0x28, 0, 0x8E);
 
+  idt[0x30] = add_idt_entry((uint64_t)int_table[0x30], 0x28, 0, 0x8E);
+  idt[0xff] =
+      add_idt_entry((uint64_t)(uintptr_t)spurious_interrupt, 0x28, 0, 0x8E);
   // uint8_t val = inb(PIC1_DATA) & ~(1 << 1);
   // outb(PIC1_DATA, val);
 
   // flush
-  idt_ptr.limit = sizeof(idt) - 1;
+  idt_ptr.limit = 256 * sizeof(idt_entry_t) - 1;
   idt_ptr.base = (uint64_t)&idt[0];
   asm volatile("lidt %0" : : "m"(idt_ptr));
-  asm("sti");
+  // asm("sti");
 
   // while (inb(0x64) & 0x1)
   //   inb(0x60);
@@ -141,17 +147,29 @@ extern void int_handler(registers_t rsp) {
     serial_send_string("isr : ");
 
     serial_send_number(rsp.int_no, 10);
-    serial_send_string(" ");
+    serial_send_string("\n");
+    // KDEBUG(1, "ISR: 0x%x", local_apic_addr);
 
     if (rsp.int_no == 33) {
       uint8_t scancode = inb(0x60);
       serial_send_number(scancode, 16);
+    } else if (rsp.int_no == 32) {
+      time++;
+      // serial_send_string("pit\n");
     }
+    // check error
+    // *(volatile uint32_t *)(local_apic_addr + 0xB0) = 0;
+    // *(volatile uint32_t *)(local_apic_addr + 0x420) = 0x2;
 
+    // EOI check
     // // eoi
+    apic_eoi();
     // if (rsp.int_no >= 40)
-    //   outb(PIC2_COMMAND, 0x20);
-
-    // outb(PIC1_COMMAND, 0x20);
   }
+}
+
+extern void pit_handler() {
+  serial_send_string("pit\n");
+  // ++time;
+  apic_eoi();
 }

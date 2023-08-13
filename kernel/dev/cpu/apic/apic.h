@@ -37,5 +37,8 @@
 
 int apic_is_supported();
 void apic_setup(void);
+void apic_eoi(void);
+void apic_write(uint8_t reg, uint32_t value);
+uint32_t apic_read(uint8_t reg);
 
 #endif
