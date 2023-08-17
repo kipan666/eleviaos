@@ -44,18 +44,18 @@ static idt_entry_t idt[256];
 static idt_ptr_t idt_ptr;
 
 void idt_setup(void) {
-  for (int i = 0; i <= 31; i++)
+  for (int i = 0; i <= 255; i++)
     idt[i] = add_idt_entry((uint64_t)int_table[i], 0x28, 0, 0x8E);
 
   pic_remap();
   KDEBUG(1, "Remap and disable PIC done");
 
-  for (int i = 33; i <= 47; i++)
-    idt[i] = add_idt_entry((uint64_t)int_table[i], 0x28, 0, 0x8E);
+  // for (int i = 33; i <= 47; i++)
+  //   idt[i] = add_idt_entry((uint64_t)int_table[i], 0x28, 0, 0x8E);
 
-  idt[0x30] = add_idt_entry((uint64_t)int_table[0x30], 0x28, 0, 0x8E);
-  idt[0xff] =
-      add_idt_entry((uint64_t)(uintptr_t)spurious_interrupt, 0x28, 0, 0x8E);
+  // idt[0x30] = add_idt_entry((uint64_t)int_table[0x30], 0x28, 0, 0x8E);
+  // idt[0xff] =
+  //     add_idt_entry((uint64_t)(uintptr_t)spurious_interrupt, 0x28, 0, 0x8E);
   // uint8_t val = inb(PIC1_DATA) & ~(1 << 1);
   // outb(PIC1_DATA, val);
 
@@ -144,10 +144,11 @@ extern void int_handler(registers_t rsp) {
       ;
   } else {
     // start pic
-    serial_send_string("isr : ");
-
-    serial_send_number(rsp.int_no, 10);
-    serial_send_string("\n");
+    if (rsp.int_no != 48) {
+      serial_send_string("isr : ");
+      serial_send_number(rsp.int_no, 10);
+      serial_send_string("\n");
+    }
     // KDEBUG(1, "ISR: 0x%x", local_apic_addr);
 
     if (rsp.int_no == 33) {
@@ -156,6 +157,8 @@ extern void int_handler(registers_t rsp) {
     } else if (rsp.int_no == 32) {
       time++;
       // serial_send_string("pit\n");
+    } else if (rsp.int_no == 48) {
+      ++time;
     }
     // check error
     // *(volatile uint32_t *)(local_apic_addr + 0xB0) = 0;

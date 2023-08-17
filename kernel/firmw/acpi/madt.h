@@ -35,18 +35,28 @@
 
 #include <stdint.h>
 
-struct MADT {
+typedef struct __attribute__((packed)) {
   char signature[4];
-  uint8_t length[4];
+  uint32_t length;
   uint8_t revision;
   uint8_t checksum;
-  uint8_t OEMID[6];
-  uint8_t OEMTableID[8];
-  uint8_t OEMRevision[4];
-  uint8_t creatorID[4];
-  uint8_t creatorRevision[4];
-  uint8_t localApicAddress[4];
-  uint8_t flags[4];
+  char OEMID[6];
+  char OEMTableID[8];
+  uint32_t OEMRevision;
+  char creatorID[4];
+  uint32_t creatorRevision;
+} madt_header_;
+
+typedef struct __attribute__((__packed__)) {
+  uint8_t entry_type; // according to madt_entry_type_t
+  uint8_t record_length;
+} madt_record_table_entry_t;
+
+struct MADT {
+  madt_header_ header;
+  uint32_t localApicAddress;
+  uint32_t flags;
+  madt_record_table_entry_t table[];
 } __attribute__((packed));
 
 #endif // __FIRMW__ACPI__MADT_H_

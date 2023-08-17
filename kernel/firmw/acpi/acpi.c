@@ -34,6 +34,7 @@
 #include "madt.h"
 #include "rsdp.h"
 #include "rsdt.h"
+#include <dev/mem/mem.h>
 #include <libk/debug/debug.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -59,7 +60,14 @@ struct ACPI_INT_SRC {
   uint16_t flags;
 } __attribute__((packed));
 
-uint8_t *local_apic_addr = 0;
+struct ACPI_NMI {
+  struct ACPI_APIC_ENTRY h;
+  uint8_t processor;
+  uint16_t flags;
+  uint8_t lint;
+} __attribute__((packed));
+
+uintptr_t local_apic_addr = 0;
 uint8_t *io_apic_addr = 0;
 
 int strncmp_(const char *s1, const char *s2, size_t n) {
@@ -74,25 +82,24 @@ int strncmp_(const char *s1, const char *s2, size_t n) {
 
 void madt_parse(struct MADT *madt_) {
   // 1. find Local APCI Address
-  local_apic_addr = (uint8_t *)(uintptr_t)madt_->localApicAddress;
+  local_apic_addr =
+      phys_to_higher_half_data((uintptr_t)madt_->localApicAddress);
   KDEBUG(DEBUG_LEVEL_DEBUG, "Local APIC Address: 0x%x", local_apic_addr);
 
   // parse entries
-  uint8_t *ptr = (uint8_t *)(uintptr_t)madt_ + 44;
-  uint8_t *ptr_end = ptr + *(uint32_t *)madt_->length;
+  uint8_t *ptr = (uint8_t *)&madt_->table;
+  size_t ptr_end = (size_t)&madt_->header + madt_->header.length;
   while (ptr < ptr_end) {
-    uint8_t type = ptr[0];
-    uint8_t len = ptr[1];
-    switch (type) {
+    switch (*ptr) {
     case 0: {
-      KDEBUG(0, "Processor Local APIC -> CPU core ID : %d",
-             *(uint8_t *)(ptr + 3));
+      KDEBUG(0, "Processor-->CPU core ID: %d, addr: 0x%x, flags: 0b%b",
+             *(uint8_t *)(ptr + 3), (uint32_t)(ptr), *(uint32_t *)(ptr + 4));
       break;
     }
     case 1: {
       struct ACPI_IO_APIC *ioapic = (struct ACPI_IO_APIC *)ptr;
       io_apic_addr = (uint8_t *)(uintptr_t)ioapic->ioApicAddress;
-      KDEBUG(DEBUG_LEVEL_DEBUG, "IOAPIC: 0x%x", io_apic_addr);
+      // KDEBUG(DEBUG_LEVEL_DEBUG, "IOAPIC: 0x%x", io_apic_addr);
       break;
     }
     case 2: {
@@ -101,8 +108,13 @@ void madt_parse(struct MADT *madt_) {
              int_src->globalSystemInterrupt, int_src->busSource);
       break;
     }
+    case 4: {
+      struct ACPI_NMI *nmi = (struct ACPI_NMI *)ptr;
+      KDEBUG(DEBUG_LEVEL_DEBUG, "NMI: %d, flags : 0b%b", nmi->lint, nmi->flags);
+      break;
     }
-    ptr += len;
+    }
+    ptr += *(ptr + 1);
   }
 }
 

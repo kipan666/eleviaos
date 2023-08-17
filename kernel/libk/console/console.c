@@ -93,6 +93,16 @@ void console_printf(const char *fmt, ...) {
           fb_put_char(*str++, pos_x, pos_y, fgcolor, 0x1A1917);
           pos_x += 1;
         }
+        break;
+      }
+      case 'b': {
+        int num = va_arg(args, int);
+        char *str = val_to_str(num, 2);
+        while (*str != '\0') {
+          fb_put_char(*str++, pos_x, pos_y, fgcolor, 0x1A1917);
+          pos_x += 1;
+        }
+        break;
       }
       }
       // fmt++;
@@ -146,6 +156,15 @@ void console_vaprintf(const char *fmt, va_list args) {
           fb_put_char(*str, pos_x, pos_y, fgcolor, 0x1A1917);
           pos_x += 1;
           str++;
+        }
+        break;
+      }
+      case 'b': {
+        int num = va_arg(args, uint64_t);
+        char *str = val_to_str(num, 2);
+        while (*str != '\0') {
+          fb_put_char(*str++, pos_x, pos_y, fgcolor, 0x1A1917);
+          pos_x += 1;
         }
         break;
       }

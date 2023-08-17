@@ -146,14 +146,23 @@ void _start(struct stivale2_struct *stivale2_struct) {
 
   // APIC
   apic_setup();
+  // apic_timer_setup();
   ioapic_setup();
-  apic_timer_setup();
-  __asm__ volatile("sti");
 
   KDEBUG(DEBUG_LEVEL_INFO,
          "Advanced Programmable Interrupt Controller initialized");
   // KDEBUG(0, "Time : %d", time);
 
+  // while (inb(0x64) & 0x1)
+  //   inb(0x60);
+
+  // while (inb(0x64) & 0x2)
+  //   outb(0x60, 0xf4);
+
+  // // uint8_t val2 = inb(PIC1_DATA) | (1 << 1);
+  // // outb(PIC1_DATA, val2);
+
+  // KDEBUG(1, "Keyboard setup done");
   for (;;) {
   }
 }

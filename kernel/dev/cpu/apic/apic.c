@@ -48,18 +48,46 @@ int apic_is_supported() {
   return edx & (1 << 9);
 }
 
+void cpuGetMSR(uint32_t msr, uint32_t *lo, uint32_t *hi) {
+  asm volatile("rdmsr" : "=a"(*lo), "=d"(*hi) : "c"(msr));
+}
+
+void cpuSetMSR(uint32_t msr, uint32_t lo, uint32_t hi) {
+  asm volatile("wrmsr" : : "a"(lo), "d"(hi), "c"(msr));
+}
+
 #define APIC_TPR 0x80
 #define APIC_DFR 0xE0
 #define APIC_LDR 0xD0
 #define APIC_SVR 0xF0
 #define APIC_EOI 0xB0
+#define APIC_ICR_LOW 0x300
+#define APIC_ICR_HIGH 0x310
+#define APIC_LOGIC_DEST 0xD0
+#define APIC_ARBITATION_PRIOR 0x090
+#define APIC_IRR 0x200
+#define APIC_IEA 0x480
 
-void apic_write(uint8_t reg, uint32_t value) {
-  *(volatile uint32_t *)(local_apic_addr + reg) = value;
+#define APIC_LVT_MASK (1 << 16) && 0b1
+#define APIC_LVT_VECTOR 0xFF
+
+#define APIC_ICR_MSG_FIXED (0b000 << 8)
+#define APIC_ICR_MSG_LOWEST_PRIOR (0b001 << 8)
+#define APIC_ICR_MSG_SMI (0b010 << 8)
+#define APIC_ICR_MSG_NMI (0b100 << 8)
+#define APIC_ICR_MSG_INIT (0b101 << 8)
+
+#define APIC_ICR_TGM_LEVEL (1 << 15)
+#define APIC_ICR_TGM_EDGE (0 << 15)
+
+#define APIC_LINT0 0x350
+
+void apic_write(uint32_t reg, uint32_t value) {
+  *((volatile uint32_t *)(local_apic_addr + reg)) = value;
 }
 
-uint32_t apic_read(uint8_t reg) {
-  return *(volatile uint32_t *)(local_apic_addr + reg);
+uint32_t apic_read(uint32_t reg) {
+  return *((volatile uint32_t *)local_apic_addr + reg);
 }
 
 void apic_setup() {
@@ -67,17 +95,88 @@ void apic_setup() {
   if (apic_is_supported())
     KDEBUG(DEBUG_LEVEL_DEBUG, "APIC supported");
 
+  // check is x2 apic supported
+  // uint32_t eax, ebx, ecx, edx;
+  // cpuid(&eax, &ebx, &ecx, &edx);
+  // if (ecx & (1 << 21))
+  //   KDEBUG(DEBUG_LEVEL_DEBUG, "x2APIC supported");
+
+  KDEBUG(DEBUG_LEVEL_DEBUG, "APIC Base: 0x%x", local_apic_addr);
+
   apic_write(APIC_TPR, 0x00);
   apic_write(APIC_DFR, 0xFFFFFFFF);
-  apic_write(APIC_LDR, 0x04000000);
-  apic_write(APIC_SVR, (1 << 8) | (1 << 9) | 0x2);
+  // apic_write(APIC_LDR, 0x0100000);
+  apic_write(APIC_SVR, 0xff | 0x100);
+  // KDEBUG(0, "ldr : 0x%x", apic_read(APIC_SVR));
 
-  // mask lint 0 and lint 1
-  apic_write(0x350, 0x10000);
-  apic_write(0x360, 0x10000);
+  // apic_write(APIC_LOGIC_DEST, 0x01000000);
+
+  // // unmask
+  // apic_write(APIC_LINT0, 0x400 | 0x1);
+
+  // apic_write(0x3E0, 3);
+  // apic_write(0x380, 0xFFFFFFFF);
+  // apic_write(0x320, 0x10000);
+  // uint32_t tick = 0xFFFFFFFF - apic_read(0x390);
+
+  // uint16_t divisor = 1193180 / (100000 / 50);
+  // outb_(0x43, 0x80 | 0x00 | 0x30);
+  // outb_(0x00, divisor & 0xFF);
+  // outb_(0x00, (divisor)&0xFF);
+  // uint8_t pit_controll_ = inb_(0x61);
+  // outb(0x61, pit_controll_ & ~1);
+  // outb(0x61, pit_controll_ | 1);
+
+  // while (!(inb_(0x61) & 0x20))
+  //   ;
+
+  // // apic_write(0x320, 33 | 0x20000);
+  // apic_write(0x3E0, 3);
+  // apic_write(0x380, tick / 10);
+  // asm("int $3");
+
+  // apic_write(0x360, 0x00000);
+
+  // apic_eoi();
+  apic_write(APIC_ICR_HIGH, (0x0 << 24));
+  apic_write(APIC_ICR_LOW, 0x29 | 0x0 | 0x00004000 | 0x0);
+
+  KDEBUG(0, "ICR : 0x%x, delivered status 0b%b, read status : 0b%b",
+         apic_read(APIC_ICR_LOW), apic_read(APIC_ICR_LOW >> 12) & 0x1,
+         (apic_read(APIC_ICR_LOW) >> 16) & 0x3);
+  // move to apic 1
+  // apic_write(0x20, 0x01000000);
+  // apic_write(APIC_LOGIC_DEST, 0x02000000);
+  // apic_write(APIC_LINT0, 0x2);
+
+  // apic_write(APIC_ICR_HIGH, (0x1 << 24));
+  // apic_write(APIC_ICR_LOW, (0b101 << 8) | (1 << 14));
+  // while (apic_read(APIC_ICR_LOW) & (1 << 12))
+  //   asm volatile("pause" : : : "memory");
+
+  // apic_write(APIC_ICR_HIGH, (0x1 << 24));
+  // apic_write(APIC_ICR_LOW, (0b101 << 8) | (1 << 15));
+  // while (apic_read(APIC_ICR_LOW) & (1 << 12))
+  //   asm volatile("pause" : : : "memory");
+
+  // apic_write(APIC_ICR_HIGH, (0x1 << 24));
+  // apic_write(APIC_ICR_LOW, (0b110 << 8));
+  // while (apic_read(APIC_ICR_LOW) & (1 << 12))
+  //   asm volatile("pause" : : : "memory");
+  // KDEBUG(0, "ICR : 0x%x, delivered status 0b%b, read status : 0b%b",
+  //        apic_read(APIC_ICR_LOW), apic_read(APIC_ICR_LOW >> 12) & 0x1,
+  //        (apic_read(APIC_ICR_LOW) >> 16) & 0x3);
+
+  // apic_write(0x20, 0x01000000);
+
+  // accept interrupt
+  KDEBUG(0, "APIC Version : 0x%x, max LVT : %d, APIC CUR ID: %d",
+         apic_read(0x30), ((apic_read(0x30) >> 16) & 0xFF) + 1,
+         (uint8_t)(apic_read(0x20) >> 24));
+
+  KDEBUG(0, "error 0b%b", apic_read(0x370));
+
+  __asm__ volatile("sti");
 }
 
-void apic_eoi() {
-  apic_write(APIC_EOI, 0);
-  serial_send_string("EOI\n");
-}
+void apic_eoi() { apic_write(APIC_EOI, 0); }
