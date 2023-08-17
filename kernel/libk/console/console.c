@@ -54,9 +54,12 @@ void console_println(const char *str) {
 // convert number to string
 char *val_to_str(uint64_t val, int base) {
   static char buf[64] = {0};
-  int i = 62;
+  int i = 60;
   for (; val && i; --i, val /= base)
     buf[i] = "0123456789abcdef"[val % base];
+  buf[i] = '0';
+  if (buf[i + 1] == 0)
+    return &buf[i];
   return &buf[i + 1];
 }
 
@@ -90,6 +93,16 @@ void console_printf(const char *fmt, ...) {
           fb_put_char(*str++, pos_x, pos_y, fgcolor, 0x1A1917);
           pos_x += 1;
         }
+        break;
+      }
+      case 'b': {
+        int num = va_arg(args, int);
+        char *str = val_to_str(num, 2);
+        while (*str != '\0') {
+          fb_put_char(*str++, pos_x, pos_y, fgcolor, 0x1A1917);
+          pos_x += 1;
+        }
+        break;
       }
       }
       // fmt++;
@@ -112,8 +125,8 @@ void console_vaprintf(const char *fmt, va_list args) {
       continue;
     }
     if (pos_y > fb_get_height()) {
-      fb_scroll_up();
-      pos_y -= 1;
+      // fb_scroll_up();
+      // pos_y -= 16;
     }
     if (*fmt == '%') {
       fmt++;
@@ -143,6 +156,15 @@ void console_vaprintf(const char *fmt, va_list args) {
           fb_put_char(*str, pos_x, pos_y, fgcolor, 0x1A1917);
           pos_x += 1;
           str++;
+        }
+        break;
+      }
+      case 'b': {
+        int num = va_arg(args, uint64_t);
+        char *str = val_to_str(num, 2);
+        while (*str != '\0') {
+          fb_put_char(*str++, pos_x, pos_y, fgcolor, 0x1A1917);
+          pos_x += 1;
         }
         break;
       }

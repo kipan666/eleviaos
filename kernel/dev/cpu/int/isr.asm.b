@@ -75,3 +75,31 @@ int_table:
     dq isr_%+i
 %assign i i+1
 %endrep
+
+global pit_interrupt
+extern pit_handler
+extern local_apic_addr
+extern time
+pit_interrupt:
+        push rax
+        push rdi
+
+        ; mov eax, dword [time]
+        ; inc eax
+        ; mov dword [time], eax
+        call pit_handler;
+
+        ; Acknowledge interrupt
+        mov rdi, [local_apic_addr]
+        add rdi, 0xB0
+        xor eax, eax
+        stosd
+        ; mov word [local_apic_addr + 0x0B0], 0
+
+        pop rdi
+        pop rax
+        iretq
+
+global spurious_interrupt
+spurious_interrupt:
+        iretq

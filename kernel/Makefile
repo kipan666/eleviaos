@@ -29,13 +29,13 @@ LDFLAGS = -nostdlib               \
 
 .PHONY: all
 all: $(OBJ)	
-	x86_64-elf-ld $(LDFLAGS) $(OBJ) -o $(KERNEL)
+	ld $(LDFLAGS) $(OBJ) -o $(KERNEL)
 
 -include $(DFILES)
 	
 %.o:%.c	
 	mkdir -p $(dir $@)
-	x86_64-elf-gcc $(CFLAGS) -c $< -o $@	
+	gcc $(CFLAGS) -c $< -o $@	
 
 %_asm.o:%.asm
 	nasm -f elf64 $< -o $@

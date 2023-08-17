@@ -6,7 +6,7 @@ all-hdd: barebones.hdd
 
 .PHONY: run
 run: iso
-	qemu-system-x86_64 -M q35 -m 2G -smp 1 -cdrom elysia.iso -boot d  -s  -serial stdio --enable-kvm
+	qemu-system-x86_64 -M q35 -m 2G -smp 2 -cdrom elysia.iso -boot d  -s  -serial stdio --enable-kvm
 
 .PHONY: run-gdb
 run-gdb: iso

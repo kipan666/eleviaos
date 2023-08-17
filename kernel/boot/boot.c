@@ -32,6 +32,8 @@
 
 #include "stivale2.h"
 #include <dev/cpu/apic/apic.h>
+// #include <dev/cpu/apic/ioapic.h>
+// #include <dev/cpu/apic/timer.h>
 #include <dev/cpu/gdt/gdt.h>
 #include <dev/cpu/int/idt.h>
 #include <dev/cpu/pic/pic.h>
@@ -40,6 +42,7 @@
 #include <dev/mem/budy.h>
 #include <dev/mem/pmm.h>
 #include <dev/mem/vmm.h>
+// #include <firmw/acpi/acpi.h>
 #include <firmw/acpi/madt.h>
 #include <firmw/acpi/rsdp.h>
 #include <firmw/acpi/rsdt.h>
@@ -50,6 +53,7 @@
 
 static uint8_t stack[4096];
 static uint64_t *initrd;
+uint32_t time = 0;
 
 static struct stivale2_tag l5_tag = {
     .identifier = STIVALE2_HEADER_TAG_5LV_PAGING_ID, .next = 0};
@@ -67,11 +71,13 @@ __attribute__((section(".stivale2hdr"),
     .flags = (1 << 1) || (1 << 2),
     .tags = (uint64_t)&framebuffer_hdr_tag};
 
-void *stivale2_get_tag(struct stivale2_struct *stivale2_struct, uint64_t id) {
+void *stivale2_get_tag(struct stivale2_struct *stivale2_struct, uint64_t id)
+{
   struct stivale2_tag *current_tag =
       (struct stivale2_tag *)(void *)stivale2_struct->tags;
 
-  for (;;) {
+  for (;;)
+  {
     if (current_tag == 0)
       return 0;
 
@@ -82,8 +88,10 @@ void *stivale2_get_tag(struct stivale2_struct *stivale2_struct, uint64_t id) {
   }
 }
 
-int strncmp(const char *s1, const char *s2, size_t n) {
-  while (n-- != 0) {
+int strncmp(const char *s1, const char *s2, size_t n)
+{
+  while (n-- != 0)
+  {
     if (*s1 != *s2++)
       return *(unsigned char *)s1 - *(unsigned char *)--s2;
     if (*s1++ == 0)
@@ -92,14 +100,16 @@ int strncmp(const char *s1, const char *s2, size_t n) {
   return 0;
 }
 
-void _start(struct stivale2_struct *stivale2_struct) {
+void _start(struct stivale2_struct *stivale2_struct)
+{
   serial_setup();
 
   struct stivale2_struct_tag_modules *modules_info =
       (struct stivale2_struct_tag_modules *)stivale2_get_tag(
           stivale2_struct, STIVALE2_STRUCT_TAG_MODULES_ID);
 
-  if (modules_info->module_count >= 1) {
+  if (modules_info->module_count >= 1)
+  {
     serial_send_string("kernel modules found\n");
   }
 
@@ -128,11 +138,8 @@ void _start(struct stivale2_struct *stivale2_struct) {
   KDEBUG(DEBUG_LEVEL_INFO, "Global Descriptor Table initialized");
 
   // IDT
-  idt_setup();
+  // idt_setup();
   KDEBUG(DEBUG_LEVEL_INFO, "Interrupt Descriptor Table initialized");
-
-  // diable 8259 PIC
-  pic_disable();
 
   // RSDP
   struct stivale2_struct_tag_rsdp *rsdp_info =
@@ -140,45 +147,29 @@ void _start(struct stivale2_struct *stivale2_struct) {
           stivale2_struct, STIVALE2_STRUCT_TAG_RSDP_ID);
   KDEBUG(DEBUG_LEVEL_INFO, "RSDP address: 0x%x", rsdp_info->rsdp);
 
-  struct MADT *madt = 0;
-  ACPI_RSDP *rsdp = (ACPI_RSDP *)rsdp_info->rsdp;
-  struct ACPI_RSDT *rsdt = (struct ACPI_RSDT *)(rsdp->RsdtAddress);
-
-  int entry_count = (rsdt->h.Length - sizeof(rsdt->h)) / 4;
-  for (int i = 0; i < entry_count; i++) {
-    struct ACPI_SDT *h = (struct ACPI_SDT *)(rsdt->PointerToOtherSDT[i]);
-    if (strncmp(h->Signature, "APIC", 4) == 0) {
-      KDEBUG(DEBUG_LEVEL_DEBUG, "Multiple APIC Description Table Address: 0x%x",
-             h);
-      madt = (struct MADT *)h;
-      break;
-    }
-  }
-  if (!madt) {
-    KDEBUG(DEBUG_LEVEL_ERROR, "Multiple APIC Description Table not found");
-    for (;;)
-      ;
-  }
-
-  // LAPIC
-  uint8_t *local_apic_addr = (uint8_t *)(madt->localAPICAddress);
-  KDEBUG(DEBUG_LEVEL_DEBUG, "Local APIC Addr : 0x%x", local_apic_addr);
-
-  // I/O APIC
-  uint8_t *madt_e_ = (uint8_t *)(uintptr_t)(uint32_t *)madt + 44;
-  uint8_t *end_ = madt_e_ + *((uint32_t *)madt->length);
-  while (madt_e_ < end_) {
-    if (madt_e_[0] == 1) { // I/O APIC
-      KDEBUG(0, "I/O APIC Addr: 0x%x", *((uint32_t *)(madt_e_ + 4)));
-      break;
-    }
-    madt_e_ += madt_e_[1];
-  }
+  // ACPI
+  // acpi_setup(rsdp_info);
 
   // APIC
-  apic_setup();
-  KDEBUG(DEBUG_LEVEL_INFO, "Advanced Programmable Interrupt Controller "
-                           "initialized");
-  for (;;) {
+  // apic_setup();
+  // apic_timer_setup();
+  // ioapic_setup();
+
+  KDEBUG(DEBUG_LEVEL_INFO,
+         "Advanced Programmable Interrupt Controller initialized");
+  // KDEBUG(0, "Time : %d", time);
+
+  // while (inb(0x64) & 0x1)
+  //   inb(0x60);
+
+  // while (inb(0x64) & 0x2)
+  //   outb(0x60, 0xf4);
+
+  // // uint8_t val2 = inb(PIC1_DATA) | (1 << 1);
+  // // outb(PIC1_DATA, val2);
+
+  // KDEBUG(1, "Keyboard setup done");
+  for (;;)
+  {
   }
 }

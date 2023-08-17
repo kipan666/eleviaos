@@ -27,6 +27,7 @@
         "string_view": "c",
         "tuple": "c",
         "ratio": "c",
-        "rsdt.h": "c"
+        "rsdt.h": "c",
+        "ioapic.h": "c"
     }
 }

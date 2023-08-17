@@ -64,13 +64,13 @@ void kernel_debug_impl(const char *file_, uint16_t line_num_,
     console_chfg(0xFFFFF0);
     break;
   case DEBUG_LEVEL_DEBUG:
-    console_chfg(0xFFff00);
+    console_chfg(0x0aF2F5);
     break;
   case DEBUG_LEVEL_ERROR:
     console_chfg(0xDC283A);
     break;
   }
-  console_printf("[%s] at %s:%d", get_debug_level_str(level_), file_,
+  console_printf("[%s] at %s:%d|", get_debug_level_str(level_), file_,
                  line_num_);
   console_add_space(2);
   console_vaprintf(message_, args);
