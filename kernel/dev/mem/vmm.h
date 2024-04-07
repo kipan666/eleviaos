@@ -36,10 +36,13 @@
 #include <stdint.h>
 
 #define PAGE_SIZE 0x1000
+#define GB 0x40000000UL
+
+typedef uint64_t *page_t;
 
 void vmm_setup(void);
 uint64_t *vmm_create_page_directory();
-void vmm_map_page(uint64_t *page_dir, uint64_t virt, uint64_t phys, int flags);
-uint64_t *vmm_get_page_level(uint64_t *page_dir, uint64_t index, int flags);
+void vmm_map_page(page_t page_dir, uint64_t virt, uint64_t phys, int flags);
+void vmm_reload(page_t pml4);
 
 #endif // __DEV__MEM__VMM_H_

@@ -35,8 +35,10 @@
 #include <libk/serial.h>
 #include <stdarg.h>
 
-char *get_debug_level_str(DEBUG_LEVEL level_) {
-  switch (level_) {
+char *get_debug_level_str(DEBUG_LEVEL level_)
+{
+  switch (level_)
+  {
   case DEBUG_LEVEL_INFO:
     return "INFO";
     break;
@@ -56,15 +58,17 @@ char *get_debug_level_str(DEBUG_LEVEL level_) {
 }
 
 void kernel_debug_impl(const char *file_, uint16_t line_num_,
-                       DEBUG_LEVEL level_, const char *message_, ...) {
+                       DEBUG_LEVEL level_, const char *message_, ...)
+{
   va_list args;
   va_start(args, message_);
-  switch (level_) {
+  switch (level_)
+  {
   case DEBUG_LEVEL_INFO:
-    console_chfg(0xFFFFF0);
+    console_chfg(0xFFFFC0);
     break;
   case DEBUG_LEVEL_DEBUG:
-    console_chfg(0x0aF2F5);
+    console_chfg(0x0aA2A5);
     break;
   case DEBUG_LEVEL_ERROR:
     console_chfg(0xDC283A);
@@ -76,4 +80,8 @@ void kernel_debug_impl(const char *file_, uint16_t line_num_,
   console_vaprintf(message_, args);
   console_newline();
   va_end(args);
+}
+
+void kernel_assert_impl(const char *file_, uint16_t line_num_)
+{
 }

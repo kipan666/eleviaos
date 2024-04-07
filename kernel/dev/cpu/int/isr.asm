@@ -41,16 +41,16 @@ int_common:
     je .next
     swapgs
     .next:
-    pushall
-    mov rdi, rsp
-    call int_handler
-    popall
-    add rsp, 16
-    cmp qword [rsp + 8], 0x28
-    je .next1
-    swapgs
+        pushall
+        mov rdi, rsp
+        call int_handler
+        popall
+        add rsp, 16
+        cmp qword [rsp + 8], 0x28
+        je .next1
+        swapgs
     .next1:
-    iretq
+        iretq
 
 %macro isr 1
 isr_%1:

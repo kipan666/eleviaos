@@ -62,6 +62,11 @@ void pmm_setup(struct stivale2_struct_tag_memmap *memmap) {
       bitmap_base_ = (uint8_t *)(phys_to_higher_half_data(entry->base));
       entry->base += bitmap_size_;
       entry->length -= bitmap_size_;
+      serial_send_string("bitmap base : 0x");
+      serial_send_number((uint64_t)bitmap_base_, 16);
+      serial_send_string("  bitmap size : ");
+      serial_send_number(bitmap_size_ / 1024, 10);
+      serial_send_string("kb\n");
       break;
     }
   }
@@ -76,30 +81,77 @@ void pmm_setup(struct stivale2_struct_tag_memmap *memmap) {
 
     pmm_free((void *)entry->base, entry->length / BLOCK_SIZE);
   }
+
+  // logger
+  for (uint64_t i = 0; i < memmap->entries; i++) {
+    struct stivale2_mmap_entry *entry = &memmap->memmap[i];
+    if (!(entry->type == STIVALE2_MMAP_USABLE ||
+          entry->type == STIVALE2_MMAP_KERNEL_AND_MODULES ||
+          entry->type == STIVALE2_MMAP_BOOTLOADER_RECLAIMABLE ||
+          entry->type == STIVALE2_MMAP_ACPI_RECLAIMABLE ||
+          entry->type == STIVALE2_MMAP_ACPI_NVS ||
+          entry->type == STIVALE2_MMAP_BAD_MEMORY))
+      continue;
+    serial_send_string("base: 0x");
+    serial_send_number(entry->base, 16);
+    serial_send_string("  length: ");
+    serial_send_number(entry->length / 1024, 10);
+    serial_send_string("kb type : ");
+    switch (entry->type) {
+    case STIVALE2_MMAP_USABLE:
+      serial_send_string("USABLE");
+      break;
+    // case STIVALE2_MMAP_RESERVED:
+    //   serial_send_string("RESERVED");
+    //   break;
+    case STIVALE2_MMAP_ACPI_RECLAIMABLE:
+      serial_send_string("ACPI_RECLAIMABLE");
+      break;
+    case STIVALE2_MMAP_ACPI_NVS:
+      serial_send_string("ACPI_NVS");
+      break;
+    case STIVALE2_MMAP_BAD_MEMORY:
+      serial_send_string("BAD_MEMORY");
+      break;
+    case STIVALE2_MMAP_BOOTLOADER_RECLAIMABLE:
+      serial_send_string("BOOTLOADER_RECLAIMABLE");
+      break;
+    case STIVALE2_MMAP_KERNEL_AND_MODULES:
+      serial_send_string("KERNEL_AND_MODULES");
+      break;
+    }
+
+    serial_send_string("\n");
+  }
   bitmap_base_[0 / 8] |= 1 << (0 % 8);
 }
 
 void *pmm_alloc(size_t block) {
   uint64_t start = 0;
   for (uint64_t i = 0; i < higher_base_length_ / BLOCK_SIZE; i++) {
-    if (!(bitmap_base_[i / 8] & (1 << (i % 8)))) {
-      start = i;
-      break;
+    if (bitmap_base_[i / 8] & (1 << (i % 8))) {
+      start = i + 1;
+      continue;
+    }
+    if (i - start + 1 == block) {
+      for (uint64_t j = start; j <= i; j++)
+        bitmap_base_[j / 8] |= 1 << (j % 8);
+      return (void *)phys_to_higher_half_data((uint64_t)(start * BLOCK_SIZE));
     }
   }
-  if (!start) {
-    KDEBUG(DEBUG_LEVEL_ERROR, "out of memory");
-  }
-  for (size_t i = 0; i < block; i++) {
-    bitmap_base_[(start + i) / 8] |= 1 << ((start + i) % 8);
-  }
-
-  void *out = (void *)phys_to_higher_half_data((uint64_t)(start * BLOCK_SIZE));
-  return out;
 }
 
-void pmm_free(void *ptr, size_t size) {
+void pmm_free(void *ptr, uint64_t size) {
   uint64_t index = ((uint64_t)ptr) / BLOCK_SIZE;
-  for (size_t i = 0; i < size; i++)
+  for (uint64_t i = 0; i < size; i++)
     bitmap_base_[(index + i) / 8] &= ~(1 << ((index + i) % 8));
+}
+
+void pmm_log_usage() {
+  uint64_t used = 0;
+  for (uint64_t i = 0; i < higher_base_length_ / BLOCK_SIZE; i++) {
+    if (bitmap_base_[i / 8] & (1 << (i % 8)))
+      used++;
+  }
+  KDEBUG(DEBUG_LEVEL_INFO, "used memory : %d Alloc \n", used);
 }

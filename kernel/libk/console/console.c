@@ -53,14 +53,32 @@ void console_println(const char *str) {
 
 // convert number to string
 char *val_to_str(uint64_t val, int base) {
-  static char buf[64] = {0};
-  int i = 60;
-  for (; val && i; --i, val /= base)
-    buf[i] = "0123456789abcdef"[val % base];
-  buf[i] = '0';
-  if (buf[i + 1] == 0)
-    return &buf[i];
-  return &buf[i + 1];
+  // static char buf[64] = {0};
+  // int i = 60;
+  // for (; val && i; --i, val /= base)
+  //   buf[i] = "0123456789abcdef"[val % base];
+  // buf[i] = '0';
+  // if (buf[i + 1] == 0)
+  //   return &buf[i];
+  // return &buf[i + 1];
+
+  char *str = "0123456789ABCDEF";
+  static char buffer[128] = {0};
+  int i = 0;
+  while (val > 0) {
+    buffer[i] = str[val % base];
+    val /= base;
+    i++;
+  }
+  buffer[i] = '\0';
+  static char buffer2[128] = {0};
+  int j = 0;
+  for (i = i - 1; i >= 0; i--) {
+    buffer2[j] = buffer[i];
+    j++;
+  }
+  buffer2[j] = '\0';
+  return &buffer2[0];
 }
 
 // print formatted string
@@ -150,7 +168,7 @@ void console_vaprintf(const char *fmt, va_list args) {
         break;
       }
       case 'x': {
-        int num = va_arg(args, uint64_t);
+        uint64_t num = va_arg(args, uint64_t);
         char *str = val_to_str(num, 16);
         while (*str != '\0') {
           fb_put_char(*str, pos_x, pos_y, fgcolor, 0x1A1917);
@@ -185,3 +203,8 @@ void console_newline() {
 void console_chfg(uint32_t color) { fgcolor = color; }
 
 void console_add_space(int n) { pos_x += n; }
+
+void console_set_pos(int x, int y) {
+  pos_x = x;
+  pos_y = y;
+}

@@ -35,7 +35,8 @@
 
 #include <boot/stivale2.h>
 #include <stdint.h>
+#include <stdbool.h>
 
-void initrd_init(struct stivale2_struct_tag_modules *modules_tag);
+bool initrd_init(struct stivale2_struct_tag_modules *modules_tag);
 char *initrd_find_file(const char *name);
 #endif // __DEV__INITRD__INITRD_H_

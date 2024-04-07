@@ -35,7 +35,8 @@
 
 #include <stdint.h>
 
-typedef enum {
+typedef enum
+{
   DEBUG_LEVEL_DEBUG,
   DEBUG_LEVEL_INFO,
   DEBUG_LEVEL_WARN,
@@ -46,7 +47,11 @@ typedef enum {
 
 #define KDEBUG(...) kernel_debug_impl(__FILE__, __LINE__, __VA_ARGS__)
 
+#define KASSERT(...) kernel_assert_impl(__FILE__, __LINE__)
+
 void kernel_debug_impl(const char *file_, uint16_t line_num_,
                        DEBUG_LEVEL level_, const char *message_, ...);
+
+void kernel_assert_impl(const char *file_, uint16_t line_num_);
 
 #endif // __LIBK__DEBUG_H_

@@ -40,6 +40,7 @@
 
 void pmm_setup(struct stivale2_struct_tag_memmap *memmap);
 void *pmm_alloc(size_t block);
-void pmm_free(void *ptr, size_t size);
+void pmm_free(void *ptr, uint64_t size);
+void pmm_log_usage();
 
 #endif

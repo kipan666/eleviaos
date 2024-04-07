@@ -38,9 +38,12 @@
 static uint8_t *initrd_base_;
 static uint8_t *initrd_end_;
 
-int strcmp(const char *str1, const char *str2) {
-  while (*str1 && *str2) {
-    if (*str1 != *str2) {
+int strcmp(const char *str1, const char *str2)
+{
+  while (*str1 && *str2)
+  {
+    if (*str1 != *str2)
+    {
       return 0;
     }
     str1++;
@@ -49,10 +52,12 @@ int strcmp(const char *str1, const char *str2) {
   return 1;
 }
 
-int oct2bin(unsigned char *str, int len) {
+int oct2bin(unsigned char *str, int len)
+{
   int n = 0;
   unsigned char *c = str;
-  while (len-- > 0) {
+  while (len-- > 0)
+  {
     n *= 8;
     n += *c - '0';
     c++;
@@ -60,28 +65,37 @@ int oct2bin(unsigned char *str, int len) {
   return n;
 }
 
-void initrd_init(struct stivale2_struct_tag_modules *modules_tag) {
-  for (uint64_t i = 0; i < modules_tag->module_count; i++) {
+bool initrd_init(struct stivale2_struct_tag_modules *modules_tag)
+{
+  for (uint64_t i = 0; i < modules_tag->module_count; i++)
+  {
     struct stivale2_module *module = &modules_tag->modules[i];
-    if (strcmp(module->string, "boot:///initrd.tar")) {
+    if (strcmp(module->string, "boot:///initrd.tar"))
+    {
       serial_send_string("\ninitrd found\n");
       initrd_base_ = (uint8_t *)module->begin;
       initrd_end_ = (uint8_t *)module->end;
     }
   }
+  return true;
 }
 
 // find file in initrd
 // TODO: add support for recursive search
-char *initrd_find_file(const char *name) {
+char *initrd_find_file(const char *name)
+{
   uint8_t *addr = initrd_base_;
+
   TarHeader *header = (TarHeader *)addr;
-  while (strcmp(header->ustar, "ustar")) {
+  while (strcmp(header->ustar, "ustar"))
+  {
     int size = oct2bin(header->size, 11);
-    if (strcmp(header->filename, name)) {
+    if (strcmp(header->filename, name))
+    {
       serial_send_string(header->filename);
       serial_send_string(" loaded from rootdir\n");
-      if (header->typeflag[0] == '5') {
+      if (header->typeflag[0] == '5')
+      {
         uint8_t *subaddr = addr + 512;
         header = (TarHeader *)subaddr;
         serial_send_string(header->filename);

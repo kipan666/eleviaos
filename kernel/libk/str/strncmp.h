@@ -30,18 +30,7 @@
   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef __LIBK__CONSOLE__CONSOLE_H_
-#define __LIBK__CONSOLE__CONSOLE_H_
+#ifndef __LIBK__STR__STRNCMP_H_
+#define __LIBK__STR__STRNCMP_H_
 
-#include <stdarg.h>
-#include <stdint.h>
-
-void console_println(const char *str);
-void console_printf(const char *fmt, ...);
-void console_newline();
-void console_chfg(uint32_t color);
-void console_vaprintf(const char *fmt, va_list args);
-void console_add_space(int n);
-void console_set_pos(int x, int y);
-
-#endif // __LIBK__CONSOLE__CONSOLE_H_
+#endif // __LIBK__STR__STRNCMP_H_

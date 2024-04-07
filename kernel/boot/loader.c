@@ -30,18 +30,40 @@
   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef __LIBK__CONSOLE__CONSOLE_H_
-#define __LIBK__CONSOLE__CONSOLE_H_
+#include "loader.h"
 
-#include <stdarg.h>
-#include <stdint.h>
+// ini adalah besar dari stack yang akan digunakan oleh kernel
+static uint8_t stack[4096];
 
-void console_println(const char *str);
-void console_printf(const char *fmt, ...);
-void console_newline();
-void console_chfg(uint32_t color);
-void console_vaprintf(const char *fmt, va_list args);
-void console_add_space(int n);
-void console_set_pos(int x, int y);
+static struct stivale2_tag l5_tag = {
+    .identifier = STIVALE2_HEADER_TAG_5LV_PAGING_ID, .next = 0};
 
-#endif // __LIBK__CONSOLE__CONSOLE_H_
+static struct stivale2_header_tag_framebuffer framebuffer_hdr_tag = {
+    .tag = {.identifier = STIVALE2_HEADER_TAG_FRAMEBUFFER_ID, .next = 0},
+    .framebuffer_width = 0,
+    .framebuffer_height = 0,
+    .framebuffer_bpp = 0};
+
+__attribute__((section(".stivale2hdr"),
+               used)) static struct stivale2_header stivale_hdr = {
+    .entry_point = 0,
+    .stack = (uintptr_t)stack + sizeof(stack),
+    .flags = (1 << 1) | (1 << 2),
+    .tags = (uint64_t)&framebuffer_hdr_tag};
+
+void *stivale2_get_tag(struct stivale2_struct *stivale2_struct, uint64_t id)
+{
+    struct stivale2_tag *current_tag =
+        (struct stivale2_tag *)(void *)stivale2_struct->tags;
+
+    for (;;)
+    {
+        if (current_tag == 0)
+            return 0;
+
+        if (current_tag->identifier == id)
+            return current_tag;
+
+        current_tag = (struct stivale2_tag *)(void *)current_tag->next;
+    }
+}
