@@ -28,7 +28,7 @@ void serial_send_string(char *str) {
 
 void serial_send_number(uint64_t num, int base) {
   char *str = "0123456789ABCDEF";
-  char buffer[64];
+  static char buffer[128] = {0};
   int i = 0;
   while (num > 0) {
     buffer[i] = str[num % base];
@@ -36,12 +36,13 @@ void serial_send_number(uint64_t num, int base) {
     i++;
   }
   buffer[i] = '\0';
-  char buffer2[64];
+  static char buffer2[128] = {0};
+  buffer2[0] = '0';
   int j = 0;
   for (i = i - 1; i >= 0; i--) {
     buffer2[j] = buffer[i];
     j++;
   }
   buffer2[j] = '\0';
-  serial_send_string(buffer2);
+  serial_send_string(&buffer2[0]);
 }

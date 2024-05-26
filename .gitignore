@@ -6,3 +6,4 @@ limine
 iso_root
 build
 zig-*
+.vscode

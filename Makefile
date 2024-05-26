@@ -10,7 +10,7 @@ run: iso
 
 .PHONY: run-gdb
 run-gdb: iso
-	qemu-system-x86_64 -M pc-i440fx-4.2 -m 4G -cdrom elysia.iso -boot d -enable-kvm -s -parallel stdio -d int,guest_errors -S
+	qemu-system-x86_64 -M q35 -m 4G -cdrom elysia.iso -boot d -enable-kvm -s -parallel stdio -d trace:usb_ehci_irq -device usb-ehci,id=ehci -device usb-kbd,bus=ehci.0,port=2,id=kbd
 
 .PHONY: run-uefi
 run-uefi: ovmf-x64 iso

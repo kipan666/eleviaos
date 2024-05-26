@@ -138,7 +138,8 @@ void _start(struct stivale2_struct *stivale2_struct) {
   // PCI Setup
   pci_setup();
 
-  // ps2 setup
+  // ehci setup
+  setup_ehci();
 
   // uint8_t val = inb(0x60);
   // val |= 0b1110111;
